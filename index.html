@@ -823,9 +823,44 @@
       const fb = useFirebase();
       const user = useAuth(fb);
 
+      // localStorage → Firestore 마이그레이션
+      const migrateFromLocalStorage = async (uid) => {
+        const { db, collection, doc, setDoc, writeBatch } = fb;
+        const migrated = localStorage.getItem('migrated_to_firestore');
+        if (migrated) return; // 이미 마이그레이션 완료
+
+        const localTodos = (() => { try { return JSON.parse(localStorage.getItem('todos')) || []; } catch { return []; } })();
+        const localRecords = (() => { try { return JSON.parse(localStorage.getItem('studyRecords')) || []; } catch { return []; } })();
+
+        if (localTodos.length === 0 && localRecords.length === 0) {
+          localStorage.setItem('migrated_to_firestore', '1');
+          return;
+        }
+
+        try {
+          const batch = writeBatch(db);
+          localTodos.forEach((todo, idx) => {
+            const ref = doc(db, 'users', uid, 'todos', String(todo.id));
+            batch.set(ref, { ...todo, order: todo.order ?? idx });
+          });
+          localRecords.forEach(record => {
+            const ref = doc(db, 'users', uid, 'studyRecords', String(record.id));
+            batch.set(ref, record);
+          });
+          await batch.commit();
+          localStorage.setItem('migrated_to_firestore', '1');
+          alert(`기존 데이터 ${localTodos.length}개 할일, ${localRecords.length}개 공부 기록을 옮겼어요!`);
+        } catch (e) {
+          console.error('마이그레이션 실패:', e);
+        }
+      };
+
       const handleLogin = async () => {
         if (!fb) return;
-        try { await fb.signInWithPopup(fb.auth, fb.provider); }
+        try {
+          const result = await fb.signInWithPopup(fb.auth, fb.provider);
+          await migrateFromLocalStorage(result.user.uid);
+        }
         catch (e) { console.error('로그인 실패:', e); }
       };
       const handleLogout = async () => {
