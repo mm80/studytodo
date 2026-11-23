@@ -26,9 +26,9 @@
     :root {
       --bg:        #dce8fb;   /* 페이지 배경 */
       --surface:   #eef3fc;   /* 카드/헤더 */
-      --surface2:  #e4ecf9;   /* 이번주 카드 배경 */
-      --border:    #c8d8f4;   /* 테두리 */
-      --border2:   #d8e4f7;   /* 얇은 구분선 */
+      --surface2:  #d4e3f8;   /* 이번주 카드 배경 */
+      --border:    #a8c0e8;   /* 테두리 */
+      --border2:   #bdd0ef;   /* 얇은 구분선 */
       --txt1:      #1a3560;   /* 주 텍스트 */
       --txt2:      #4a6a9e;   /* 보조 텍스트 */
       --txt3:      #7a9acc;   /* 흐린 텍스트 */
@@ -417,7 +417,7 @@
           <div className="flex items-center justify-between px-1 mb-1.5">
             <div className="flex items-center gap-2">
               <span className={`text-sm dark:text-gray-100 dark:font-normal dark:text-gray-500`}
-                style={isToday && !isBacklog ? {fontWeight:600, color:'var(--txt1)'} : {fontWeight:400, color:'var(--txt3)'}}>
+                style={isToday && !isBacklog ? {fontWeight:600, color:'var(--accent)'} : {fontWeight:600, color:'var(--txt2)'}}>
                 {label}
               </span>
               {active.length > 0 && (
