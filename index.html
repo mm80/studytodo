@@ -21,9 +21,25 @@
     .dragging-item { opacity: 0.5; }
     .drag-handle { cursor: grab; }
     .drag-handle:active { cursor: grabbing; }
+
+    /* ── 라이트모드 파랑 팔레트 ── */
+    :root {
+      --bg:        #dce8fb;   /* 페이지 배경 */
+      --surface:   #eef3fc;   /* 카드/헤더 */
+      --surface2:  #e4ecf9;   /* 이번주 카드 배경 */
+      --border:    #c8d8f4;   /* 테두리 */
+      --border2:   #d8e4f7;   /* 얇은 구분선 */
+      --txt1:      #1a3560;   /* 주 텍스트 */
+      --txt2:      #4a6a9e;   /* 보조 텍스트 */
+      --txt3:      #7a9acc;   /* 흐린 텍스트 */
+      --accent:    #2d62d4;   /* 버튼·강조 */
+      --accent-h:  #1e50b8;   /* 버튼 hover */
+      --badge:     #c8d8f4;   /* 뱃지 배경 */
+      --badge-txt: #3a5a94;   /* 뱃지 텍스트 */
+    }
   </style>
 </head>
-<body class="bg-white dark:bg-gray-900 transition-colors">
+<body class="dark:bg-gray-900 transition-colors" style="background:var(--bg)">
   <div id="root"></div>
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -153,8 +169,8 @@
     // === Header ===
     function Header({ isDark, onToggleDark, user, onLogin, onLogout }) {
       return (
-        <header className="flex items-center justify-between px-4 py-4 sm:px-6 border-b border-gray-200 dark:border-gray-700">
-          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">할일 & 공부 기록</h1>
+        <header className="flex items-center justify-between px-4 py-4 sm:px-6 border-b dark:border-gray-700 dark:bg-transparent" style={{background:'var(--surface)', borderColor:'var(--border)'}}>
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight dark:text-gray-100" style={{color:'var(--txt1)'}}>할일 & 공부 기록</h1>
           <div className="flex items-center gap-2">
             {user ? (
               <div className="flex items-center gap-2">
@@ -187,12 +203,13 @@
     function TabNav({ activeTab, onChangeTab }) {
       const tabs = [{ id: 'todos', label: '할일' }, { id: 'study', label: '공부 기록' }];
       return (
-        <nav className="flex border-b border-gray-200 dark:border-gray-700">
+        <nav className="flex border-b dark:border-gray-700" style={{borderColor:'var(--border)', background:'var(--surface)'}}>
           {tabs.map(tab => (
             <button key={tab.id} onClick={() => onChangeTab(tab.id)}
-              className={`flex-1 py-3 text-sm font-medium transition-colors relative ${activeTab === tab.id ? 'text-gray-900 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
+              className={`flex-1 py-3 text-sm font-medium transition-colors relative ${activeTab === tab.id ? 'dark:text-blue-400' : 'dark:text-gray-400 dark:hover:text-gray-300'}`}
+              style={activeTab === tab.id ? {color:'var(--accent)'} : {color:'var(--txt3)'}}>
               {tab.label}
-              {activeTab === tab.id && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900 dark:bg-blue-400" />}
+              {activeTab === tab.id && <span className="absolute bottom-0 left-0 right-0 h-0.5 dark:bg-blue-400" style={{background:'var(--accent)'}} />}
             </button>
           ))}
         </nav>
@@ -250,7 +267,8 @@
       const handleKeyDown = (e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') { setEditText(todo.text); setIsEditing(false); } };
 
       return (
-        <li className={`p-3 rounded-lg border group transition-colors ${isSelected ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'} ${selectMode ? 'cursor-pointer' : ''}`}
+        <li className={`p-3 rounded-lg border group transition-colors ${isSelected ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600' : 'dark:bg-gray-800 dark:border-gray-700'} ${selectMode ? 'cursor-pointer' : ''}`}
+          style={!isSelected ? {background:'var(--surface)', borderColor:'var(--border)'} : {}}
           draggable={dragEnabled && !selectMode}
           onDragStart={(e) => !selectMode && onDragStart && onDragStart(e, todo.id)}
           onDragOver={(e) => !selectMode && onDragOver && onDragOver(e, todo.id)}
@@ -394,15 +412,17 @@
       };
 
       return (
-        <div className="border-b border-gray-100 dark:border-gray-800 last:border-b-0 py-2.5">
+        <div className="border-b dark:border-gray-800 last:border-b-0 py-2.5" style={{borderColor:'var(--border2)'}}>
           {/* 섹션 헤더 */}
           <div className="flex items-center justify-between px-1 mb-1.5">
             <div className="flex items-center gap-2">
-              <span className={`text-sm ${isToday && !isBacklog ? 'font-semibold text-gray-900 dark:text-gray-100' : 'font-normal text-gray-400 dark:text-gray-500'}`}>
+              <span className={`text-sm dark:text-gray-100 dark:font-normal dark:text-gray-500`}
+                style={isToday && !isBacklog ? {fontWeight:600, color:'var(--txt1)'} : {fontWeight:400, color:'var(--txt3)'}}>
                 {label}
               </span>
               {active.length > 0 && (
-                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${isToday && !isBacklog ? 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'}`}>
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium dark:bg-gray-600 dark:text-gray-300 dark:bg-gray-700 dark:text-gray-500`}
+                  style={isToday && !isBacklog ? {background:'var(--badge)', color:'var(--badge-txt)'} : {background:'var(--border2)', color:'var(--txt3)'}}>
                   {active.length}
                 </span>
               )}
@@ -511,7 +531,8 @@
 
       return (
         <>
-        <div className="rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 divide-y divide-gray-100 dark:divide-gray-800 px-3">
+        <div className="rounded-xl border dark:border-gray-700 dark:bg-gray-800/60 divide-y dark:divide-gray-800 px-3"
+          style={{borderColor:'var(--border)', background:'var(--surface2)', '--tw-divide-opacity':1}}>
           {/* 미완료 보관함 */}
           {backlogItems.length > 0 && (
             <DateSection
@@ -744,8 +765,12 @@
           <form onSubmit={add} className="space-y-2">
             <div className="flex gap-2">
               <input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="할일을 입력하세요"
-                className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500 text-sm" />
-              <button type="submit" className="flex-shrink-0 px-4 py-2 bg-gray-800 dark:bg-gray-200 hover:bg-gray-700 dark:hover:bg-gray-300 text-white dark:text-gray-900 rounded-lg text-sm font-medium transition-colors">추가</button>
+                className="flex-1 min-w-0 px-3 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 focus:outline-none focus:ring-1 dark:focus:ring-gray-500 text-sm"
+                style={{borderColor:'var(--border)', background:'var(--surface)', color:'var(--txt1)'}} />
+              <button type="submit" className="flex-shrink-0 px-4 py-2 dark:bg-gray-200 dark:hover:bg-gray-300 dark:text-gray-900 rounded-lg text-sm font-medium transition-colors text-white"
+                style={{background:'var(--accent)'}}
+                onMouseEnter={e => e.currentTarget.style.background='var(--accent-h)'}
+                onMouseLeave={e => e.currentTarget.style.background='var(--accent)'}>추가</button>
             </div>
             <input ref={fileInputRef} type="file" accept="image/*,.pdf,audio/*" multiple onChange={handleFileSelect} className="hidden" />
             {/* 업로드 중 표시 */}
@@ -863,7 +888,8 @@
       return (
         <ul className="space-y-2">
           {sorted.map(r => (
-            <li key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 group">
+            <li key={r.id} className="flex items-center justify-between p-3 rounded-lg border dark:bg-gray-800 dark:border-gray-700 group"
+              style={{background:'var(--surface)', borderColor:'var(--border)'}}>
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{fmt(r.hours, r.minutes)}</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{fmtDate(r.date)}</p>
@@ -949,7 +975,7 @@
         setHours(''); setMinutes('');
       };
       const del = async (id) => { await removeRecord(id); };
-      const inputCls = "px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500 text-sm";
+      const inputCls = "px-3 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 focus:outline-none focus:ring-1 dark:focus:ring-gray-500 text-sm";
 
       return (
         <div className="space-y-4">
@@ -960,7 +986,10 @@
               <span className="text-sm text-gray-500 dark:text-gray-400">시간</span>
               <input type="number" min="0" max="59" value={minutes} onChange={e => setMinutes(e.target.value)} placeholder="0" className={`${inputCls} w-16 text-center`} />
               <span className="text-sm text-gray-500 dark:text-gray-400">분</span>
-              <button type="submit" className="px-4 py-2 bg-gray-800 dark:bg-gray-200 hover:bg-gray-700 dark:hover:bg-gray-300 text-white dark:text-gray-900 rounded-lg text-sm font-medium transition-colors">기록</button>
+              <button type="submit" className="px-4 py-2 dark:bg-gray-200 dark:hover:bg-gray-300 dark:text-gray-900 rounded-lg text-sm font-medium transition-colors text-white"
+                style={{background:'var(--accent)'}}
+                onMouseEnter={e => e.currentTarget.style.background='var(--accent-h)'}
+                onMouseLeave={e => e.currentTarget.style.background='var(--accent)'}>기록</button>
             </div>
           </form>
           <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
@@ -1025,7 +1054,7 @@
       const handleLogout = async () => { if (!fb) return; await fb.signOut(fb.auth); };
 
       return (
-        <div className="min-h-screen bg-[#f5f0e8] dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
+        <div className="min-h-screen dark:bg-gray-900 dark:text-gray-100 transition-colors" style={{background:'var(--bg)', color:'var(--txt1)'}}>
           <div className="max-w-2xl mx-auto">
             <Header isDark={isDark} onToggleDark={toggle} user={user} onLogin={handleLogin} onLogout={handleLogout} />
             {user === undefined ? (
