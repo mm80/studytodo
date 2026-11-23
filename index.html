@@ -445,8 +445,8 @@
       const [items, setItems] = useState([]);
       const [openSections, setOpenSections] = useState({ backlog: true });
 
-      // 오늘~+4일 날짜 배열
-      const dates = useMemo(() => [0, 1, 2, 3, 4].map(i => getDateStr(i)), []);
+      // 오늘~+3일 날짜 배열 (오늘 포함 4일)
+      const dates = useMemo(() => [0, 1, 2, 3].map(i => getDateStr(i)), []);
 
       // 초기 열림 상태: 오늘 기본 펼침
       useEffect(() => {
