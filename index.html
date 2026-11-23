@@ -408,11 +408,6 @@
               )}
             </div>
             <div className="flex items-center gap-2">
-              {completed.length > 0 && (
-                <span className="text-[11px] text-gray-300 dark:text-gray-600">
-                  {completed.length}/{items.length} 완료
-                </span>
-              )}
               {!isBacklog && (
                 <button type="button" onClick={handlePlusClick}
                   className="w-5 h-5 flex items-center justify-center rounded-full text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" aria-label="할일 추가">
@@ -427,11 +422,6 @@
             {active.length > 0 && (
               <ul className="space-y-0.5">
                 {active.map(item => <DateTodoItem key={item.id} item={item} onToggle={onToggleItem} onDelete={onDelete} onEdit={onEdit} />)}
-              </ul>
-            )}
-            {completed.length > 0 && (
-              <ul className="space-y-0.5 mt-1 opacity-40">
-                {completed.map(item => <DateTodoItem key={item.id} item={item} onToggle={onToggleItem} onDelete={onDelete} onEdit={onEdit} />)}
               </ul>
             )}
             {/* 입력창 (+버튼 클릭 시 표시) */}
@@ -512,7 +502,15 @@
         return items.filter(item => item.date < today && !item.completed);
       }, [items, today]);
 
+      // 완료된 항목 전체: completedAt 최신순
+      const [completedOpen, setCompletedOpen] = useState(false);
+      const allCompleted = useMemo(() => {
+        return [...items.filter(item => item.completed)]
+          .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+      }, [items]);
+
       return (
+        <>
         <div className="rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 divide-y divide-gray-100 dark:divide-gray-800 px-3">
           {/* 미완료 보관함 */}
           {backlogItems.length > 0 && (
@@ -544,6 +542,24 @@
             />
           ))}
         </div>
+
+        {/* 완료됨 여닫이 */}
+        {allCompleted.length > 0 && (
+          <div className="mt-3">
+            <button onClick={() => setCompletedOpen(o => !o)} className="flex items-center gap-2 w-full text-left py-1 group/toggle">
+              <svg className={`w-3.5 h-3.5 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${completedOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <h3 className="text-xs font-semibold uppercase text-gray-400 dark:text-gray-500 tracking-wider group-hover/toggle:text-gray-600 dark:group-hover/toggle:text-gray-300 transition-colors">완료됨 ({allCompleted.length})</h3>
+            </button>
+            {completedOpen && (
+              <ul className="space-y-0.5 mt-1 opacity-50">
+                {allCompleted.map(item => <DateTodoItem key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} onEdit={handleEdit} />)}
+              </ul>
+            )}
+          </div>
+        )}
+      </>
       );
     }
 
