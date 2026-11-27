@@ -37,14 +37,30 @@
       --badge:     #c8d8f4;   /* 뱃지 배경 */
       --badge-txt: #3a5a94;   /* 뱃지 텍스트 */
     }
+
+    /* ── 다크모드 팔레트 (인라인 style이 dark: 클래스보다 우선하므로 변수를 다시 정의) ── */
+    :root.dark {
+      --bg:        #111827;
+      --surface:   #1f2937;
+      --surface2:  #1a2332;
+      --border:    #374151;
+      --border2:   #2b3544;
+      --txt1:      #f3f4f6;
+      --txt2:      #9ca3af;
+      --txt3:      #9ca3af;
+      --accent:    #60a5fa;
+      --accent-h:  #3b82f6;
+      --badge:     #374151;
+      --badge-txt: #d1d5db;
+    }
   </style>
 </head>
 <body class="dark:bg-gray-900 transition-colors" style="background:var(--bg)">
   <div id="root"></div>
 
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
 
   <!-- Firebase SDK (CDN) -->
   <script type="module" id="firebase-init">
@@ -263,8 +279,18 @@
       const completedDate = todo.completedAt ? new Date(todo.completedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) : null;
       const isSelected = selectOrder > 0;
 
-      const saveEdit = () => { const trimmed = editText.trim(); if (trimmed) { onEditText(todo.id, trimmed); } setIsEditing(false); };
-      const handleKeyDown = (e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') { setEditText(todo.text); setIsEditing(false); } };
+      const cancelRef = useRef(false);
+      // 저장은 onBlur에서 한 번만 실행 (Enter/Escape는 blur만 발생시킴)
+      const saveEdit = () => {
+        if (cancelRef.current) { cancelRef.current = false; setIsEditing(false); return; }
+        const trimmed = editText.trim();
+        if (trimmed && trimmed !== todo.text) onEditText(todo.id, trimmed);
+        setIsEditing(false);
+      };
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') { cancelRef.current = true; setEditText(todo.text); e.currentTarget.blur(); }
+      };
 
       return (
         <li className={`p-3 rounded-lg border group transition-colors ${isSelected ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600' : 'dark:bg-gray-800 dark:border-gray-700'} ${selectMode ? 'cursor-pointer' : ''}`}
@@ -337,10 +363,20 @@
 
     // === DateTodoTab ===
     // 날짜 헬퍼: 오늘로부터 offset일 후의 날짜 문자열 반환 (YYYY-MM-DD)
+    // Date → 로컬 시간 기준 YYYY-MM-DD (toISOString은 UTC라 한국 오전 9시 전엔 하루 밀림)
+    function toLocalDateStr(d) {
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+    // 하루가 바뀌는 기준 시각: 새벽 0~6시는 전날로 취급 (7시부터 새로운 날)
+    const DAY_START_HOUR = 7;
+    function getLogicalNow() {
+      return new Date(Date.now() - DAY_START_HOUR * 60 * 60 * 1000);
+    }
     function getDateStr(offset) {
-      const d = new Date();
+      const d = getLogicalNow();
       d.setDate(d.getDate() + offset);
-      return d.toISOString().split('T')[0];
+      return toLocalDateStr(d);
     }
 
     // 날짜 표시용 레이블
@@ -359,8 +395,18 @@
     function DateTodoItem({ item, onToggle, onDelete, onEdit }) {
       const [isEditing, setIsEditing] = useState(false);
       const [editText, setEditText] = useState(item.text);
-      const save = () => { const t = editText.trim(); if (t) onEdit(item.id, t); setIsEditing(false); };
-      const handleKey = (e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setEditText(item.text); setIsEditing(false); } };
+      const cancelRef = useRef(false);
+      // 저장은 onBlur에서 한 번만 실행 (Enter/Escape는 blur만 발생시킴)
+      const save = () => {
+        if (cancelRef.current) { cancelRef.current = false; setIsEditing(false); return; }
+        const t = editText.trim();
+        if (t && t !== item.text) onEdit(item.id, t);
+        setIsEditing(false);
+      };
+      const handleKey = (e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') { cancelRef.current = true; setEditText(item.text); e.currentTarget.blur(); }
+      };
       return (
         <li className="flex items-center gap-2 py-1.5 group">
           <button onClick={() => onToggle(item.id)}
@@ -387,7 +433,7 @@
     }
 
     // 날짜 섹션 (항상 펼침)
-    function DateSection({ dateStr, items, isOpen, onToggle, onAdd, onToggleItem, onDelete, onEdit, isBacklog }) {
+    function DateSection({ dateStr, items, onAdd, onToggleItem, onDelete, onEdit, isBacklog }) {
       const [input, setInput] = useState('');
       const [adding, setAdding] = useState(false);
       const inputRef = useRef(null);
@@ -395,7 +441,6 @@
       const isToday = dateStr === today;
       const label = isBacklog ? '미완료 보관함' : formatDateLabel(dateStr);
       const active = items.filter(i => !i.completed);
-      const completed = items.filter(i => i.completed);
 
       const handleAdd = (e) => {
         e.preventDefault();
@@ -416,12 +461,12 @@
           {/* 섹션 헤더 */}
           <div className="flex items-center justify-between px-1 mb-1.5">
             <div className="flex items-center gap-2">
-              <span className={`text-sm dark:text-gray-100 dark:font-normal dark:text-gray-500`}
+              <span className="text-sm"
                 style={{fontWeight:600, color:'var(--txt1)'}}>
                 {label}
               </span>
               {active.length > 0 && (
-                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium dark:bg-gray-600 dark:text-gray-300 dark:bg-gray-700 dark:text-gray-500`}
+                <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium"
                   style={isToday && !isBacklog ? {background:'var(--badge)', color:'var(--badge-txt)'} : {background:'var(--border2)', color:'var(--txt3)'}}>
                   {active.length}
                 </span>
@@ -463,15 +508,9 @@
     // 날짜별 할일 메인 컴포넌트
     function DateTodoTab({ fb, user }) {
       const [items, setItems] = useState([]);
-      const [openSections, setOpenSections] = useState({ backlog: true });
 
-      // 오늘~+3일 날짜 배열 (오늘 포함 4일)
-      const dates = useMemo(() => [0, 1, 2, 3].map(i => getDateStr(i)), []);
-
-      // 초기 열림 상태: 오늘 기본 펼침
-      useEffect(() => {
-        setOpenSections(prev => ({ ...prev, [getDateStr(0)]: true }));
-      }, []);
+      // 오늘~+3일 날짜 배열 (오늘 포함 4일) — 매 렌더마다 계산해서 자정이 지나도 갱신
+      const dates = [0, 1, 2, 3].map(i => getDateStr(i));
 
       // Firestore 실시간 동기화
       useEffect(() => {
@@ -507,8 +546,6 @@
         await saveItem({ ...item, text });
       };
 
-      const toggleSection = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
-
       // 날짜별 아이템 분류
       const today = getDateStr(0);
       const itemsByDate = useMemo(() => {
@@ -538,8 +575,6 @@
             <DateSection
               dateStr={null}
               items={backlogItems}
-              isOpen={!!openSections['backlog']}
-              onToggle={() => toggleSection('backlog')}
               onAdd={() => {}}
               onToggleItem={handleToggle}
               onDelete={handleDelete}
@@ -547,14 +582,12 @@
               isBacklog={true}
             />
           )}
-          {/* 오늘~+4일 섹션 */}
+          {/* 오늘~+3일 섹션 */}
           {dates.map(dateStr => (
             <DateSection
               key={dateStr}
               dateStr={dateStr}
               items={itemsByDate[dateStr] || []}
-              isOpen={!!openSections[dateStr]}
-              onToggle={() => toggleSection(dateStr)}
               onAdd={handleAdd}
               onToggleItem={handleToggle}
               onDelete={handleDelete}
@@ -586,15 +619,12 @@
 
     // === TodoTab ===
     function TodoTab({ fb, user }) {
-      const [todoSubTab, setTodoSubTab] = useState('general'); // 'general' | 'dated'
       const [todos, setTodos] = useState([]);
-      const [dateTodos, setDateTodos] = useState([]); // 날짜별 할일 (오늘/내일 미리보기용)
       const [input, setInput] = useState('');
       const [previewFile, setPreviewFile] = useState(null);
       const fileInputRef = useRef(null);
       const [pendingFiles, setPendingFiles] = useState([]); // 업로드 완료된 파일 객체 배열
       const [uploadingFiles, setUploadingFiles] = useState([]); // 업로드 중인 파일명 배열
-      const [pendingLinks, setPendingLinks] = useState([]);
       const [isDragging, setIsDragging] = useState(false);
       const [dragLocked, setDragLocked] = useState(true);
       const dragCounter = useRef(0);
@@ -613,26 +643,6 @@
         });
         return unsub;
       }, [fb, user]);
-
-      // Firestore 실시간 동기화 - 날짜별 할일 (오늘/내일 미리보기용)
-      useEffect(() => {
-        if (!fb || !user) return;
-        const { db, collection, query, orderBy, onSnapshot } = fb;
-        const q = query(collection(db, 'users', user.uid, 'dateTodos'), orderBy('createdAt', 'asc'));
-        const unsub = onSnapshot(q, (snap) => {
-          setDateTodos(snap.docs.map(d => ({ ...d.data(), id: d.id })));
-        });
-        return unsub;
-      }, [fb, user]);
-
-      // 날짜별 할일 체크 토글
-      const toggleDateTodo = async (id) => {
-        const item = dateTodos.find(i => i.id === id); if (!item) return;
-        const { db, doc, setDoc } = fb;
-        await setDoc(doc(db, 'users', user.uid, 'dateTodos', String(id)),
-          { ...item, completed: !item.completed, completedAt: !item.completed ? new Date().toISOString() : null });
-      };
-
 
       const active = todos.filter(t => !t.completed);
       const completed = todos.filter(t => t.completed);
@@ -685,17 +695,15 @@
       };
       const removePendingFile = (idx) => setPendingFiles(prev => prev.filter((_, i) => i !== idx));
 
-      const removePendingLink = (idx) => setPendingLinks(prev => prev.filter((_, i) => i !== idx));
-
       const add = async (e) => {
         e.preventDefault();
         const text = input.trim();
-        if (!text && pendingFiles.length === 0 && pendingLinks.length === 0) return;
+        if (!text && pendingFiles.length === 0) return;
         const urlRegex = /(https?:\/\/[^\s]+)/g;
         const urls = text.match(urlRegex) || [];
         const cleanText = text.replace(urlRegex, '').trim();
         const autoLinks = urls.map(u => u.match(/^https?:\/\//) ? u : 'https://' + u);
-        const allLinks = [...pendingLinks, ...autoLinks];
+        const allLinks = autoLinks;
         const newTodo = {
           id: Date.now(),
           text: cleanText || pendingFiles.map(f => f.name).join(', ') || allLinks.map(l => l.replace(/^https?:\/\//, '').split('/')[0]).join(', ') || '링크',
@@ -703,7 +711,7 @@
           files: pendingFiles, links: allLinks, order: Date.now()
         };
         await saveTodo(newTodo);
-        setInput(''); setPendingFiles([]); setPendingLinks([]);
+        setInput(''); setPendingFiles([]);
       };
 
       const toggle = async (id) => {
@@ -723,7 +731,7 @@
         const lines = selectedIds.map(id => todos.find(t => t.id === id)?.text).filter(Boolean);
         const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `할일_${new Date().toISOString().split('T')[0]}.txt`; a.click(); URL.revokeObjectURL(url);
+        const a = document.createElement('a'); a.href = url; a.download = `할일_${getDateStr(0)}.txt`; a.click(); URL.revokeObjectURL(url);
         setSelectMode(false); setSelectedIds([]);
       };
 
@@ -791,16 +799,6 @@
                   <span key={i} className="flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-md text-xs text-blue-700 dark:text-blue-300">
                     {getFileIcon(f)} {f.name.length > 15 ? f.name.slice(0,12)+'...' : f.name}
                     <button type="button" onClick={() => removePendingFile(i)} className="ml-1 text-blue-400 hover:text-red-500">×</button>
-                  </span>
-                ))}
-              </div>
-            )}
-            {pendingLinks.length > 0 && (
-              <div className="flex flex-wrap gap-2 ml-1">
-                {pendingLinks.map((link, i) => (
-                  <span key={i} className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-md text-xs text-green-700 dark:text-green-300">
-                    🔗 {link.replace(/^https?:\/\//, '').split('/')[0]}
-                    <button type="button" onClick={() => removePendingLink(i)} className="ml-1 text-green-400 hover:text-red-500">×</button>
                   </span>
                 ))}
               </div>
@@ -905,7 +903,7 @@
 
     // === StudyCalendarView ===
     function StudyCalendarView({ records }) {
-      const [currentDate, setCurrentDate] = useState(() => new Date());
+      const [currentDate, setCurrentDate] = useState(() => getLogicalNow());
       const year = currentDate.getFullYear(); const month = currentDate.getMonth();
       const dailyTotals = useMemo(() => { const map = {}; records.forEach(r => { map[r.date] = (map[r.date] || 0) + r.totalMinutes; }); return map; }, [records]);
       const calendarDays = useMemo(() => {
@@ -952,7 +950,7 @@
     function StudyTab({ fb, user }) {
       const [records, setRecords] = useState([]);
       const [view, setView] = useState('calendar');
-      const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+      const [date, setDate] = useState(() => getDateStr(0));
       const [hours, setHours] = useState('');
       const [minutes, setMinutes] = useState('');
 
@@ -1039,7 +1037,7 @@
         const todos = data.todos || []; const records = data.studyRecords || [];
         try {
           const batch = writeBatch(db);
-          todos.forEach((todo, idx) => { batch.set(doc(db, 'users', uid, 'todos', String(todo.id)), { ...todo, files: (todo.files||[]).map(f => ({ name: f.name, type: f.type })), order: todo.order ?? idx }); });
+          todos.forEach((todo, idx) => { batch.set(doc(db, 'users', uid, 'todos', String(todo.id)), { ...todo, files: (todo.files||[]).map(f => ({ name: f.name, type: f.type, ...(typeof f.url === 'string' && /^https?:\/\//.test(f.url) ? { url: f.url } : {}) })), order: todo.order ?? idx }); });
           records.forEach(record => { batch.set(doc(db, 'users', uid, 'studyRecords', String(record.id)), record); });
           await batch.commit();
           alert(`완료! 할일 ${todos.length}개, 공부 기록 ${records.length}개를 가져왔어요.`);
